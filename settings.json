@@ -1,0 +1,19 @@
+{
+  "camera_index": 8,
+  "resolution_w": 3840,
+  "resolution_h": 2160,
+  "fps_cap": 15,
+  "detection_delay": 0.5,
+  "idle_skip_pct": 70,
+  "alert_sustain": 1.0,
+  "detection_resolution": 640,
+  "cosine_threshold": 0.55,
+  "bad_splash_threshold": 0.45,
+  "size_margin": 1.05,
+  "score_threshold": 0.7,
+  "nms_threshold": 0.3,
+  "show_splash": true,
+  "headless": false,
+  "run_in_background": false,
+  "start_on_boot": false
+}
