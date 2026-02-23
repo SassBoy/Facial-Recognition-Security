@@ -16,9 +16,21 @@ import ctypes
 import numpy as np
 import cv2
 
+# Write any unhandled exception (including import errors below) to crash.log
+# so the error is captured even when the process exits without a visible console.
+def _crash_hook(exc_type, exc_val, exc_tb):
+    import traceback
+    _log = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crash.log")
+    with open(_log, "w") as _f:
+        traceback.print_exception(exc_type, exc_val, exc_tb, file=_f)
+    sys.__excepthook__(exc_type, exc_val, exc_tb)
+sys.excepthook = _crash_hook
+
+
 from splash import SplashPlayer, SPLASH_DIR
 from input_locker import InputLocker
 from camera_enum import enumerate_cameras, get_camera_name
+from updater import check_for_updates
 
 # ---------------------------------------------------------------------------
 # Paths & tunables
@@ -42,6 +54,8 @@ WINDOW_NAME        = "Facial Recognition Security"
 _stop_requested    = False
 _active_cap        = None          # tracked for emergency cleanup
 _LOCK_FILE         = os.path.join(SCRIPT_DIR, ".camera.lock")
+
+
 
 # ---------------------------------------------------------------------------
 # Single-instance / camera-already-running check
@@ -96,18 +110,35 @@ atexit.register(_release_lock)
 # ---------------------------------------------------------------------------
 
 def _cleanup_camera():
-    """Release the camera if still held — called by atexit / signals."""
+    """Release the camera if still held — called by atexit / signals.
+
+    Virtual cameras (OBS, NVIDIA Broadcast, etc.) hold a COM/MSMF reference
+    that keeps cv2.pyd locked until fully drained.  The sequence below forces
+    the pipeline to flush before the process exits.
+    """
     global _active_cap
+    try:
+        cv2.destroyAllWindows()
+        cv2.waitKey(1)   # drain pending GUI events so windows close cleanly
+    except Exception:
+        pass
     if _active_cap is not None:
+        try:
+            _active_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # flush internal buffer
+        except Exception:
+            pass
         try:
             _active_cap.release()
         except Exception:
             pass
         _active_cap = None
+    # Second destroyAllWindows — OpenCV sometimes needs two calls after cap release
     try:
         cv2.destroyAllWindows()
+        cv2.waitKey(1)
     except Exception:
         pass
+    time.sleep(0.1)  # give MSMF/DShow COM a moment to drop its ref
 
 
 atexit.register(_cleanup_camera)
@@ -135,11 +166,13 @@ def _is_admin():
         return False
 
 
-def _elevate():
+def _elevate(): 
     if _is_admin():
         return
     print("[INFO] Requesting Administrator privileges …")
-    params = " ".join(f'"{a}"' for a in sys.argv)
+    # sys.argv[0] is the exe path itself — forwarding it makes argparse treat
+    # it as an unknown positional argument in the elevated process and exit(2).
+    params = " ".join(f'"{a}"' for a in sys.argv[1:])
     try:
         ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, params, None, 1)
@@ -779,6 +812,7 @@ def _set_size_margin(v):
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main():
     p = argparse.ArgumentParser(description="Facial Recognition Security (YuNet + SFace)")
     p.add_argument("--camera",          type=int,   default=0)
@@ -832,9 +866,22 @@ def main():
         idle_skip_pct=args.idle_skip_pct,
         alert_sustain=args.alert_sustain,
         detection_resolution=args.detection_resolution)
+    
+    #Updater
+    check_for_updates()
+
 
 
 if __name__ == "__main__":
     if not _is_admin():
-        _elevate()
-    main()
+        print("uwu")
+        #_elevate()
+    try:
+        
+        main()
+    except Exception as _exc:
+        import traceback
+        _log = os.path.join(SCRIPT_DIR, "crash.log")
+        with open(_log, "w") as _f:
+            traceback.print_exc(file=_f)
+        raise

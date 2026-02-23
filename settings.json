@@ -1,7 +1,7 @@
 {
   "camera_index": 8,
-  "resolution_w": 3840,
-  "resolution_h": 2160,
+  "resolution_w": 1280,
+  "resolution_h": 720,
   "fps_cap": 15,
   "detection_delay": 0.5,
   "idle_skip_pct": 70,

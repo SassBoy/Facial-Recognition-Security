@@ -236,28 +236,34 @@ def _probe_resolutions(idx):
         if cap is None:
             return [], 640, 480
 
-        native_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        native_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        supported, seen = [], set()
-        if native_w > 0 and native_h > 0:
-            supported.append((native_w, native_h))
-            seen.add((native_w, native_h))
+        try:
+            native_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            native_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            supported, seen = [], set()
+            if native_w > 0 and native_h > 0:
+                supported.append((native_w, native_h))
+                seen.add((native_w, native_h))
 
-        for w, h in COMMON_RESOLUTIONS:
-            if (w, h) in seen:
-                continue
-            try:
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
-                aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                if aw > 0 and ah > 0 and (aw, ah) not in seen:
-                    supported.append((aw, ah))
-                    seen.add((aw, ah))
-            except Exception:
-                continue
+            for w, h in COMMON_RESOLUTIONS:
+                if (w, h) in seen:
+                    continue
+                try:
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    if aw > 0 and ah > 0 and (aw, ah) not in seen:
+                        supported.append((aw, ah))
+                        seen.add((aw, ah))
+                except Exception:
+                    continue
+        finally:
+            # Always release — even if an exception occurs during probing.
+            # Without this, virtual cameras (e.g. Insta360) keep their COM
+            # handle open and the indicator light stays on after exit.
+            cap.release()
+            cv2.waitKey(1)  # flush MSMF/DShow pipeline
 
-        cap.release()
         supported.sort(key=lambda r: r[0] * r[1], reverse=True)
         max_w, max_h = supported[0] if supported else (640, 480)
         return supported, max_w, max_h

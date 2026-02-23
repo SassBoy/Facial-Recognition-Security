@@ -1,0 +1,39 @@
+{
+    "app_name": "Desktop-Monitor",
+    "app_version_attr": "0.0.0.1",
+    "binary_diff": null,
+    "encrypted_keys": [
+        "root",
+        "targets",
+        "snapshot",
+        "timestamp"
+    ],
+    "expiration_days": {
+        "root": 365,
+        "snapshot": 365,
+        "targets": 365,
+        "timestamp": 365
+    },
+    "key_map": {
+        "root": [
+            "root"
+        ],
+        "snapshot": [
+            "snapshot"
+        ],
+        "targets": [
+            "targets"
+        ],
+        "timestamp": [
+            "timestamp"
+        ]
+    },
+    "keys_dir": "Keys",
+    "repo_dir": "my-tuf-repo",
+    "thresholds": {
+        "root": 1,
+        "snapshot": 1,
+        "targets": 1,
+        "timestamp": 1
+    }
+}
