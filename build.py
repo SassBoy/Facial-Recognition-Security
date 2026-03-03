@@ -1,9 +1,58 @@
 import os
+import re
 import subprocess
 import shutil
 import sys  # to ensure its building uses the env
+import tkinter as tk
+from tkinter import simpledialog
 
 from app_config import APP_NAME, APP_VERSION, MAIN_SCRIPT, ICON_PATH
+
+# ---------------------------------------------------------------------------
+# Version prompt — ask for the new build number before compiling
+# ---------------------------------------------------------------------------
+
+def _get_current_version():
+    """Read APP_VERSION directly from app_config.py source file."""
+    _cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_config.py")
+    with open(_cfg, "r") as _f:
+        _m = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', _f.read())
+    return _m.group(1) if _m else APP_VERSION
+
+
+def _set_version(new_ver):
+    """Overwrite APP_VERSION in app_config.py."""
+    _cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_config.py")
+    with open(_cfg, "r") as _f:
+        _content = _f.read()
+    _content = re.sub(r'(APP_VERSION\s*=\s*)"[^"]+"', f'\\1"{new_ver}"', _content)
+    with open(_cfg, "w") as _f:
+        _f.write(_content)
+
+
+_root = tk.Tk()
+_root.withdraw()
+_current_ver = _get_current_version()
+_new_ver = simpledialog.askstring(
+    "Build Version",
+    "Enter the new build version:",
+    initialvalue=_current_ver,
+    parent=_root,
+)
+_root.destroy()
+
+if _new_ver is None:
+    print("Build cancelled.")
+    sys.exit(0)
+
+_new_ver = _new_ver.strip()
+if not _new_ver:
+    print("Build cancelled (empty version).")
+    sys.exit(0)
+
+if _new_ver != _current_ver:
+    _set_version(_new_ver)
+    print(f"[build] Version updated: {_current_ver} → {_new_ver}")
 
 # Config
 OUTPUT_DIR = "dist"

@@ -31,6 +31,7 @@ from splash import SplashPlayer, SPLASH_DIR
 from input_locker import InputLocker
 from camera_enum import enumerate_cameras, get_camera_name
 from updater import check_for_updates
+from app_config import APP_VERSION
 
 # ---------------------------------------------------------------------------
 # Paths & tunables
@@ -49,7 +50,7 @@ NMS_THRESHOLD        = 0.30
 
 MAX_FRAME_RETRIES  = 15
 IMAGE_EXTS         = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
-WINDOW_NAME        = "Facial Recognition Security"
+WINDOW_NAME        = f"Facial Recognition Security  v{APP_VERSION}"
 
 _stop_requested    = False
 _active_cap        = None          # tracked for emergency cleanup
@@ -874,8 +875,7 @@ def main():
 
 if __name__ == "__main__":
     if not _is_admin():
-        print("uwu")
-        #_elevate()
+        pass  # _elevate()
     try:
         
         main()

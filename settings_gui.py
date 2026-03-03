@@ -16,6 +16,7 @@ import ctypes
 import cv2
 import subprocess
 from PIL import Image, ImageTk
+from app_config import APP_VERSION
 
 SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
 FACES_DB_DIR  = os.path.join(SCRIPT_DIR, "faces_db")
@@ -524,6 +525,113 @@ class ToggleSwitch(tk.Canvas):
             self._cmd()
 
 # ---------------------------------------------------------------------------
+# Custom canvas scrollbar (ttk.Scrollbar thumb is OS-controlled on Windows
+# and stays invisible on dark backgrounds regardless of ttk.Style settings)
+# ---------------------------------------------------------------------------
+
+class CanvasScrollbar(tk.Canvas):
+    """A fully-custom vertical scrollbar drawn on a Canvas.
+
+    Thumb / track colours are set entirely via PAL so they remain
+    visible on any dark background theme.
+    """
+    _WIDTH = 10
+    _MIN_THUMB = 24   # px — prevents thumb from becoming too small to grab
+
+    def __init__(self, parent, command=None, **kw):
+        kw.setdefault("width",              self._WIDTH)
+        kw.setdefault("bg",                 PAL["bg"])
+        kw.setdefault("highlightthickness", 0)
+        kw.setdefault("bd",                 0)
+        super().__init__(parent, **kw)
+        self._command  = command
+        self._drag_y   = None
+        self._drag_top = 0.0
+        self._top      = 0.0
+        self._bottom   = 1.0
+
+        self.bind("<Configure>",       self._redraw)
+        self.bind("<ButtonPress-1>",   self._on_press)
+        self.bind("<B1-Motion>",       self._on_drag)
+        self.bind("<ButtonRelease-1>", self._on_release)
+        self.bind("<Enter>",           lambda e: self._set_hover(True))
+        self.bind("<Leave>",           lambda e: self._set_hover(False))
+        self._hover = False
+
+    # ------------------------------------------------------------------
+    # Public protocol expected by tk.Canvas.yscrollcommand
+    # ------------------------------------------------------------------
+    def set(self, lo, hi):
+        self._top    = float(lo)
+        self._bottom = float(hi)
+        self._redraw()
+
+    # ------------------------------------------------------------------
+    # Drawing
+    # ------------------------------------------------------------------
+    def _thumb_coords(self):
+        """Return (ty, by) pixel coords of the thumb, clamped to min size."""
+        h  = self.winfo_height()
+        ty = int(self._top    * h)
+        by = int(self._bottom * h)
+        if by - ty < self._MIN_THUMB:
+            centre = (ty + by) // 2
+            ty = max(0,     centre - self._MIN_THUMB // 2)
+            by = min(h - 1, ty     + self._MIN_THUMB)
+        return ty, by
+
+    def _set_hover(self, state):
+        self._hover = state
+        self._redraw()
+
+    def _redraw(self, event=None):
+        self.delete("all")
+        w = self.winfo_width()
+        h = self.winfo_height()
+        if w <= 0 or h <= 0:
+            return
+        # Track background
+        self.create_rectangle(0, 0, w, h, fill=PAL["surface"], outline="")
+        # No thumb needed when all content is visible
+        if self._bottom - self._top >= 1.0:
+            return
+        ty, by = self._thumb_coords()
+        thumb_color = PAL["accent_hover"] if self._hover else PAL["accent"]
+        pad = 2
+        self.create_rectangle(pad, ty, w - pad, by,
+                              fill=thumb_color, outline="", tags="thumb")
+
+    # ------------------------------------------------------------------
+    # Mouse interaction
+    # ------------------------------------------------------------------
+    def _on_press(self, event):
+        h = self.winfo_height()
+        if h <= 0:
+            return
+        ty, by = self._thumb_coords()
+        if ty <= event.y <= by:
+            # Start drag — remember where on the thumb we clicked
+            self._drag_y   = event.y
+            self._drag_top = self._top
+        elif event.y < ty:
+            self._command("scroll", -1, "pages")
+        else:
+            self._command("scroll",  1, "pages")
+
+    def _on_drag(self, event):
+        if self._drag_y is None:
+            return
+        h = self.winfo_height()
+        if h <= 0:
+            return
+        delta = (event.y - self._drag_y) / h
+        self._command("moveto", self._drag_top + delta)
+
+    def _on_release(self, event):
+        self._drag_y = None
+
+
+# ---------------------------------------------------------------------------
 # Main GUI
 # ---------------------------------------------------------------------------
 
@@ -531,7 +639,7 @@ class SettingsGUI:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Facial Recognition Security")
+        self.root.title(f"Facial Recognition Security  v{APP_VERSION}")
         self.root.configure(bg=PAL["bg"])
         self.root.resizable(True, True)
         self.root.minsize(640, 520)
@@ -623,9 +731,8 @@ class SettingsGUI:
         self.root.option_add("*TCombobox*Listbox.selectForeground", PAL["accent_text"])
         self.root.option_add("*TCombobox*Listbox.font", ("Segoe UI", 10))
 
-        style.configure("Vertical.TScrollbar",
-                         background=PAL["surface"], troughcolor=PAL["bg"],
-                         borderwidth=0, arrowsize=0)
+        # Note: ttk.Scrollbar is not used for the main panel — CanvasScrollbar
+        # is used instead (ttk thumb is OS-controlled and invisible on dark themes)
 
     @staticmethod
     def _style_combobox_popdown(combo):
@@ -650,7 +757,7 @@ class SettingsGUI:
         container.pack(fill="both", expand=True)
 
         self._canvas = tk.Canvas(container, bg=PAL["bg"], highlightthickness=0)
-        sb = ttk.Scrollbar(container, orient="vertical", command=self._canvas.yview)
+        sb = CanvasScrollbar(container, command=self._canvas.yview)
         self._canvas.configure(yscrollcommand=sb.set)
         sb.pack(side="right", fill="y")
         self._canvas.pack(side="left", fill="both", expand=True)
@@ -690,6 +797,11 @@ class SettingsGUI:
 
         # -- Launch row --
         self._build_launch_row(pad)
+
+        # -- Version label --
+        tk.Label(pad, text=f"v{APP_VERSION}",
+                 bg=PAL["bg"], fg=PAL["text_dim"],
+                 font=("Segoe UI", 9)).pack(anchor="e", pady=(8, 0))
 
     # -- Card builder helpers ---------------------------------------------
     def _make_card(self, parent, title, subtitle=None):

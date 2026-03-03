@@ -1,1 +1,56 @@
-Keys/
+# =============================================================
+# Private / secret
+# =============================================================
+Keys/                   # TUF signing keys — never commit private keys
+
+# =============================================================
+# Build output
+# =============================================================
+dist/                   # Nuitka compiled output
+build/
+*.dist-info/
+nuitka-crash-report.xml
+
+# =============================================================
+# Python
+# =============================================================
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# =============================================================
+# Runtime / user-specific files
+# =============================================================
+resolution_cache.json   # auto-generated at runtime
+settings.json           # user settings — each machine configures their own
+crash.log
+.camera.lock
+
+# =============================================================
+# Large binary assets (download separately / user-supplied)
+# =============================================================
+models/                 # ONNX model files — downloaded via --download-models
+faces_db/               # user face database — machine-specific
+
+# =============================================================
+# Cache & temp
+# =============================================================
+cache/
+*.tmp
+*.temp
+
+# =============================================================
+# IDE / OS
+# =============================================================
+.vscode/settings.json   # keep .vscode/launch.json etc, ignore personal settings
+.idea/
+*.swp
+*~
+Thumbs.db
+desktop.ini
+.DS_Store

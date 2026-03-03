@@ -1,0 +1,18 @@
+# Runtime dependencies
+numpy==2.4.2
+opencv-contrib-python==4.13.0.92
+pillow==12.1.1
+screeninfo==0.8.1
+
+# Updater (TUF-based auto-update)
+tuf==4.0.0
+tufup==0.10.0
+securesystemslib==0.31.0
+requests==2.32.5
+cryptography==46.0.5
+PyNaCl==1.6.2
+bsdiff4==1.2.6
+zstandard==0.25.0
+
+# Build only (not needed to run the app)
+# Nuitka==4.0.1
