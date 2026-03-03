@@ -30,7 +30,6 @@ sys.excepthook = _crash_hook
 from splash import SplashPlayer, SPLASH_DIR
 from input_locker import InputLocker
 from camera_enum import enumerate_cameras, get_camera_name
-from updater import check_for_updates
 from app_config import APP_VERSION
 
 # ---------------------------------------------------------------------------
@@ -867,9 +866,6 @@ def main():
         idle_skip_pct=args.idle_skip_pct,
         alert_sustain=args.alert_sustain,
         detection_resolution=args.detection_resolution)
-    
-    #Updater
-    check_for_updates()
 
 
 

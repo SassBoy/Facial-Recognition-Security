@@ -17,6 +17,7 @@ import cv2
 import subprocess
 from PIL import Image, ImageTk
 from app_config import APP_VERSION
+from updater import check_for_updates, apply_update
 
 SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
 FACES_DB_DIR  = os.path.join(SCRIPT_DIR, "faces_db")
@@ -662,6 +663,9 @@ class SettingsGUI:
 
         # Start IPC listener so a second launch can reshow this window
         self._start_ipc_server()
+
+        # Check for updates 4 s after the GUI appears (non-blocking)
+        self.root.after(4000, self._schedule_update_check)
 
     # -- styles -----------------------------------------------------------
     def _build_styles(self):
@@ -1899,6 +1903,57 @@ class SettingsGUI:
             _wait_and_quit()
         else:
             self.root.destroy()
+
+    # -- Update check ----------------------------------------------------
+    def _schedule_update_check(self):
+        """Run the update check on a background thread so the UI stays responsive."""
+        def _check():
+            try:
+                available = check_for_updates()
+            except Exception:
+                available = False
+            if available:
+                self.root.after(0, self._on_update_available)
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _on_update_available(self):
+        """Prompt the user and, if they agree, stop recognition then apply update."""
+        answer = messagebox.askyesno(
+            "Update Available",
+            "A new version of Facial Recognition Security is available.\n\n"
+            "Would you like to download and install it now?\n"
+            "(The application will restart automatically.)",
+            parent=self.root,
+        )
+        if not answer:
+            return
+
+        # Stop the recognition pipeline before touching files on disk
+        def _do_update():
+            if self._running:
+                import main as m
+                m._stop_requested = True
+                # Wait until the run thread has finished
+                for _ in range(100):   # up to 10 s
+                    if not self._running:
+                        break
+                    import time
+                    time.sleep(0.1)
+
+            self.root.after(0, lambda: self.status_var.set("Downloading update…"))
+            try:
+                apply_update()   # downloads, patches, then os.execv — never returns
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Update Failed",
+                    f"Could not apply update:\n{e}\n\nPlease update manually.",
+                    parent=self.root,
+                ))
+                self.root.after(0, lambda: self.status_var.set("Update failed"))
+
+        self.status_var.set("Preparing update…")
+        threading.Thread(target=_do_update, daemon=True).start()
 
     # -- IPC server -------------------------------------------------------
     def _start_ipc_server(self):
