@@ -1,12 +1,14 @@
 # =============================================================
 # Private / secret
 # =============================================================
-Keys/                   # TUF signing keys — never commit private keys
+# TUF signing keys — never commit private keys
+Keys/
 
 # =============================================================
 # Build output
 # =============================================================
-dist/                   # Nuitka compiled output
+# Nuitka compiled output
+dist/
 build/
 *.dist-info/
 nuitka-crash-report.xml
@@ -14,8 +16,10 @@ nuitka-crash-report.xml
 # =============================================================
 # TUF release artifacts — hosted on GitHub Releases, not in git
 # =============================================================
-my-tuf-repo/targets/    # large .tar.gz and .patch bundles
-targets/                # extracted targets cache
+# large .tar.gz and .patch bundles
+my-tuf-repo/targets/
+# extracted targets cache
+targets/
 
 # =============================================================
 # Python
@@ -32,16 +36,20 @@ __pycache__/
 # =============================================================
 # Runtime / user-specific files
 # =============================================================
-resolution_cache.json   # auto-generated at runtime
-settings.json           # user settings — each machine configures their own
+# auto-generated at runtime
+resolution_cache.json
+# user settings — each machine configures their own
+settings.json
 crash.log
 .camera.lock
 
 # =============================================================
 # Large binary assets (download separately / user-supplied)
 # =============================================================
-models/                 # ONNX model files — downloaded via --download-models
-faces_db/               # user face database — machine-specific
+# ONNX model files
+models/
+# user face database — machine-specific
+faces_db/
 
 # =============================================================
 # Cache & temp
@@ -53,7 +61,8 @@ cache/
 # =============================================================
 # IDE / OS
 # =============================================================
-.vscode/settings.json   # keep .vscode/launch.json etc, ignore personal settings
+# keep .vscode/launch.json etc, ignore personal settings
+.vscode/settings.json
 .idea/
 *.swp
 *~
