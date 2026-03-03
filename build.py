@@ -115,6 +115,10 @@ if os.path.exists(OUTPUT_DIR):
 result = subprocess.run(cmd)
 
 if (result.returncode == 0):
-    print("\n Build completed successfully!")
+    # Write a version stamp so release.py knows exactly what was compiled
+    version_stamp = os.path.join(OUTPUT_DIR, "version.txt")
+    with open(version_stamp, "w") as _vf:
+        _vf.write(_new_ver)
+    print(f"\n Build completed successfully! (version stamp: {version_stamp})")
 else:
     print("\n Build failed!")
