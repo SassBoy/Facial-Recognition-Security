@@ -1941,16 +1941,22 @@ class SettingsGUI:
                     import time
                     time.sleep(0.1)
 
-            self.root.after(0, lambda: self.status_var.set("Downloading update…"))
-            try:
-                apply_update()   # downloads, patches, then os.execv — never returns
-            except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror(
-                    "Update Failed",
-                    f"Could not apply update:\n{e}\n\nPlease update manually.",
-                    parent=self.root,
-                ))
-                self.root.after(0, lambda: self.status_var.set("Update failed"))
+            # Schedule the actual install on the main thread so the window
+            # can be destroyed cleanly before tufup moves files on disk.
+            def _apply_on_main():
+                self.root.withdraw()   # hide window immediately
+                try:
+                    apply_update()     # downloads, moves files, exits process
+                except Exception as e:
+                    self.root.deiconify()
+                    messagebox.showerror(
+                        "Update Failed",
+                        f"Could not apply update:\n{e}\n\nPlease update manually.",
+                        parent=self.root,
+                    )
+                    self.status_var.set("Update failed")
+
+            self.root.after(0, _apply_on_main)
 
         self.status_var.set("Preparing update…")
         threading.Thread(target=_do_update, daemon=True).start()

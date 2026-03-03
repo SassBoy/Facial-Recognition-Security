@@ -4,7 +4,6 @@ import subprocess
 import shutil
 import sys  # to ensure its building uses the env
 import tkinter as tk
-from tkinter import simpledialog
 
 from app_config import APP_NAME, APP_VERSION, MAIN_SCRIPT, ICON_PATH
 
@@ -30,29 +29,62 @@ def _set_version(new_ver):
         _f.write(_content)
 
 
+class _BuildDialog(tk.Toplevel):
+    """Custom dialog: version entry + prod/test checkbox."""
+    def __init__(self, parent, current_ver):
+        super().__init__(parent)
+        self.title("Build Options")
+        self.resizable(False, False)
+        self.result_version = None
+        self.result_prod    = False
+        self.grab_set()
+
+        tk.Label(self, text="Build version:").grid(row=0, column=0, padx=12, pady=(14, 4), sticky="w")
+        self._ver_var = tk.StringVar(value=current_ver)
+        tk.Entry(self, textvariable=self._ver_var, width=20).grid(row=0, column=1, padx=(0, 12), pady=(14, 4))
+
+        self._prod_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            self, text="Production build",
+            variable=self._prod_var,
+        ).grid(row=1, column=0, columnspan=2, padx=12, pady=4, sticky="w")
+
+        btn_frame = tk.Frame(self)
+        btn_frame.grid(row=2, column=0, columnspan=2, pady=(8, 12))
+        tk.Button(btn_frame, text="Build",  width=10, command=self._ok).pack(side="left",  padx=6)
+        tk.Button(btn_frame, text="Cancel", width=10, command=self._cancel).pack(side="left", padx=6)
+
+        self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.bind("<Return>", lambda _e: self._ok())
+        self.bind("<Escape>", lambda _e: self._cancel())
+        self.wait_window(self)
+
+    def _ok(self):
+        self.result_version = self._ver_var.get().strip()
+        self.result_prod    = self._prod_var.get()
+        self.destroy()
+
+    def _cancel(self):
+        self.destroy()
+
+
 _root = tk.Tk()
 _root.withdraw()
 _current_ver = _get_current_version()
-_new_ver = simpledialog.askstring(
-    "Build Version",
-    "Enter the new build version:",
-    initialvalue=_current_ver,
-    parent=_root,
-)
+_dlg = _BuildDialog(_root, _current_ver)
+_new_ver  = _dlg.result_version
+IS_PROD   = _dlg.result_prod
 _root.destroy()
 
-if _new_ver is None:
-    print("Build cancelled.")
-    sys.exit(0)
-
-_new_ver = _new_ver.strip()
 if not _new_ver:
-    print("Build cancelled (empty version).")
+    print("Build cancelled.")
     sys.exit(0)
 
 if _new_ver != _current_ver:
     _set_version(_new_ver)
     print(f"[build] Version updated: {_current_ver} → {_new_ver}")
+
+print(f"[build] Mode: {'PRODUCTION' if IS_PROD else 'TEST'}")
 
 # Config
 OUTPUT_DIR = "dist"
@@ -60,8 +92,6 @@ MODELS = "models"
 FACES_DB = "faces_db"
 SPLASH_ASSETS = "splash_assets"
 SETTINGS = "settings.json"
-
-IS_PROD= False
 
 cmd = [
     sys.executable, "-m", "nuitka",
@@ -77,6 +107,10 @@ cmd = [
     f"--include-data-dir=cache=cache",
     f"--include-data-file=my-tuf-repo/metadata/root.json=cache/metadata/root.json",
     f"--include-package-data=securesystemslib",
+    f"--include-package=jaraco",
+    f"--include-package=jaraco.text",
+    f"--include-package=jaraco.functools",
+    f"--include-package=jaraco.context",
     MAIN_SCRIPT
 ]
 

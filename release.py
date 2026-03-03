@@ -65,18 +65,16 @@ if not KEYS_DIR.exists():
     print(f"[release] ERROR: Keys directory '{KEYS_DIR}' not found.")
     sys.exit(1)
 
-print("\n[release] Loading repository — you will be prompted for key passphrases.")
+print("\n[release] Loading repository from config...")
 
-repo = Repository(
-    app_name=APP_NAME,
-    repo_dir=REPO_DIR,
-    keys_dir=KEYS_DIR,
-)
+repo = Repository.from_config()
 
 repo.add_bundle(
-    new_app_install_dir=DIST_DIR,
+    new_bundle_dir=DIST_DIR,
     new_version=compiled_version,
 )
+
+repo.publish_changes(private_key_dirs=[KEYS_DIR])
 
 # ---------------------------------------------------------------------------
 # Print upload instructions

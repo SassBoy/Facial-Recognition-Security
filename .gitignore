@@ -12,6 +12,12 @@ build/
 nuitka-crash-report.xml
 
 # =============================================================
+# TUF release artifacts — hosted on GitHub Releases, not in git
+# =============================================================
+my-tuf-repo/targets/    # large .tar.gz and .patch bundles
+targets/                # extracted targets cache
+
+# =============================================================
 # Python
 # =============================================================
 venv/
@@ -54,3 +60,4 @@ cache/
 Thumbs.db
 desktop.ini
 .DS_Store
+Upload_Keys.txt

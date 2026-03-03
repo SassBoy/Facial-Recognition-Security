@@ -14,8 +14,8 @@ CACHE_DIR         = pathlib.Path(__file__).resolve().parent / "cache"
 METADATA_DIR      = pathlib.Path(__file__).resolve().parent / "metadata"
 TARGET_DIR        = pathlib.Path(__file__).resolve().parent / "targets"
 
-METADATA_BASE_URL = "https://github.com/SassBoy/Facial-Recognition-Security/releases/download/"
-TARGET_BASE_URL   = "https://github.com/SassBoy/Facial-Recognition-Security/releases/download/"
+METADATA_BASE_URL = "https://github.com/SassBoy/Facial-Recognition-Security/releases/download/tuf-repo/"
+TARGET_BASE_URL   = "https://github.com/SassBoy/Facial-Recognition-Security/releases/download/tuf-repo/"
 
 
 def _build_client():
@@ -64,8 +64,17 @@ def check_for_updates() -> bool:
     continues normally when offline or the repo is unreachable.
     """
     try:
+        from packaging.version import Version
+        from app_config import APP_VERSION
         client = _build_client()
-        return bool(client.check_for_updates())
+        latest = client.check_for_updates()
+        if not latest:
+            return False
+        # Explicit guard: only signal an update when remote > current
+        if Version(str(latest.version)) <= Version(APP_VERSION):
+            print(f"[updater] Remote version {latest.version} is not newer than {APP_VERSION}, skipping.")
+            return False
+        return True
     except Exception as e:
         print(f"[updater] Update check failed: {e}")
         return False
@@ -80,8 +89,10 @@ def apply_update():
     The function never returns — it either restarts via os.execv or raises.
     """
     client = _build_client()
-    client.download_and_apply_update()
-    _restart_process()
+    client.check_for_updates()   # must populate new_targets before downloading
+    if not client.updates_available:
+        raise RuntimeError("No update available to apply.")
+    client.download_and_apply_update(skip_confirmation=True)
 
 
 def _restart_process():

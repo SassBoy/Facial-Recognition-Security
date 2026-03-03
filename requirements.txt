@@ -13,6 +13,12 @@ cryptography==46.0.5
 PyNaCl==1.6.2
 bsdiff4==1.2.6
 zstandard==0.25.0
+# jaraco namespace packages — required by setuptools internals at runtime
+# inside the compiled Nuitka executable (not auto-bundled without these)
+jaraco.collections==5.2.1
+jaraco.context==6.1.0
+jaraco.functools==4.4.0
+jaraco.text==4.2.0
 
 # Build only (not needed to run the app)
 # Nuitka==4.0.1
