@@ -56,6 +56,44 @@ _active_cap        = None          # tracked for emergency cleanup
 _LOCK_FILE         = os.path.join(SCRIPT_DIR, ".camera.lock")
 
 
+# ---------------------------------------------------------------------------
+# Win32 icon helper for OpenCV windows
+# ---------------------------------------------------------------------------
+
+def _set_cv2_window_icon(window_name: str, ico_path: str):
+    """Set a custom .ico on an OpenCV HighGUI window (Windows only)."""
+    if sys.platform != "win32" or not os.path.isfile(ico_path):
+        return
+    try:
+        FindWindowW = ctypes.windll.user32.FindWindowW
+        SendMessageW = ctypes.windll.user32.SendMessageW
+        LoadImageW = ctypes.windll.user32.LoadImageW
+
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x0010
+        LR_DEFAULTSIZE = 0x0040
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+
+        hwnd = FindWindowW(None, window_name)
+        if not hwnd:
+            return
+
+        # Load small (16x16) and large (32x32) icons
+        ico_small = LoadImageW(
+            None, ico_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE
+        )
+        ico_big = LoadImageW(
+            None, ico_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE
+        )
+        if ico_small:
+            SendMessageW(hwnd, WM_SETICON, ICON_SMALL, ico_small)
+        if ico_big:
+            SendMessageW(hwnd, WM_SETICON, ICON_BIG, ico_big)
+    except Exception:
+        pass  # non-critical — fall back to default icon
+
 
 # ---------------------------------------------------------------------------
 # Single-instance / camera-already-running check
@@ -621,6 +659,8 @@ def run(camera_id=0, width=640, height=480, headless=False, fps_cap=30,
 
     if not headless:
         cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_AUTOSIZE)
+        # Set custom icon on the OpenCV window via Win32 API
+        _set_cv2_window_icon(WINDOW_NAME, os.path.join(SCRIPT_DIR, "logo.ico"))
 
     mode = "headless" if headless else "windowed"
     print(f"[INFO] Mode: {mode}")

@@ -645,6 +645,11 @@ class SettingsGUI:
         self.root.resizable(True, True)
         self.root.minsize(640, 520)
 
+        # Set window / taskbar icon
+        _ico = os.path.join(SCRIPT_DIR, "logo.ico")
+        if os.path.isfile(_ico):
+            self.root.iconbitmap(_ico)
+
         win_w, win_h = 700, 860
         sx = self.root.winfo_screenwidth()
         sy = self.root.winfo_screenheight()
@@ -1929,25 +1934,83 @@ class SettingsGUI:
         if not answer:
             return
 
-        # Stop the recognition pipeline before touching files on disk
+        # ---- build a modal progress dialog ----
+        self._update_dlg = dlg = tk.Toplevel(self.root)
+        dlg.title("Updating…")
+        dlg.configure(bg=PAL["bg"])
+        dlg.resizable(False, False)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.protocol("WM_DELETE_WINDOW", lambda: None)  # prevent closing
+
+        dw, dh = 420, 140
+        sx = dlg.winfo_screenwidth()
+        sy = dlg.winfo_screenheight()
+        dlg.geometry(f"{dw}x{dh}+{(sx-dw)//2}+{(sy-dh)//2}")
+
+        _ico = os.path.join(SCRIPT_DIR, "logo.ico")
+        if os.path.isfile(_ico):
+            dlg.iconbitmap(_ico)
+
+        self._update_label_var = tk.StringVar(value="Preparing update…")
+        tk.Label(
+            dlg, textvariable=self._update_label_var,
+            bg=PAL["bg"], fg=PAL["text"], font=("Segoe UI", 11),
+        ).pack(padx=20, pady=(20, 8))
+
+        self._update_pct_var = tk.DoubleVar(value=0.0)
+        self._update_bar = ttk.Progressbar(
+            dlg, variable=self._update_pct_var,
+            maximum=100, length=360, mode="determinate",
+        )
+        self._update_bar.pack(padx=20, pady=(0, 8))
+
+        self._update_detail_var = tk.StringVar(value="")
+        tk.Label(
+            dlg, textvariable=self._update_detail_var,
+            bg=PAL["bg"], fg=PAL["text_dim"], font=("Segoe UI", 9),
+        ).pack(padx=20, pady=(0, 12))
+
+        # ---- stop pipeline then download in background ----
         def _do_update():
             if self._running:
                 import main as m
                 m._stop_requested = True
-                # Wait until the run thread has finished
                 for _ in range(100):   # up to 10 s
                     if not self._running:
                         break
                     import time
                     time.sleep(0.1)
 
-            # Schedule the actual install on the main thread so the window
-            # can be destroyed cleanly before tufup moves files on disk.
-            def _apply_on_main():
-                self.root.withdraw()   # hide window immediately
-                try:
-                    apply_update()     # downloads, moves files, exits process
-                except Exception as e:
+            self.root.after(0, lambda: self._update_label_var.set("Downloading update…"))
+
+            def _progress(bytes_downloaded, bytes_expected):
+                if bytes_expected > 0:
+                    pct = bytes_downloaded / bytes_expected * 100
+                else:
+                    pct = 0
+                dl_mb = bytes_downloaded / (1024 * 1024)
+                tot_mb = bytes_expected / (1024 * 1024)
+                self.root.after(0, lambda p=pct: self._update_pct_var.set(p))
+                self.root.after(0, lambda: self._update_detail_var.set(
+                    f"{dl_mb:.1f} / {tot_mb:.1f} MB"
+                ))
+
+            # Run the download + install entirely on this background thread.
+            # The progress_hook already posts UI updates via root.after().
+            # tufup's install step calls sys.exit(0) which kills the whole
+            # process, so it doesn't matter which thread we're on.
+            try:
+                self.root.after(0, lambda: self._update_label_var.set("Downloading update…"))
+                apply_update(progress_hook=_progress)
+                # tufup calls sys.exit(0) — we should not reach here
+            except SystemExit:
+                # sys.exit(0) from tufup — let it propagate
+                import os
+                os._exit(0)
+            except Exception as e:
+                def _show_error():
+                    dlg.destroy()
                     self.root.deiconify()
                     messagebox.showerror(
                         "Update Failed",
@@ -1955,10 +2018,9 @@ class SettingsGUI:
                         parent=self.root,
                     )
                     self.status_var.set("Update failed")
+                self.root.after(0, _show_error)
 
-            self.root.after(0, _apply_on_main)
-
-        self.status_var.set("Preparing update…")
+        self.status_var.set("Updating…")
         threading.Thread(target=_do_update, daemon=True).start()
 
     # -- IPC server -------------------------------------------------------

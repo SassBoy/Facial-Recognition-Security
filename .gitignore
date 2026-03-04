@@ -15,6 +15,9 @@ nuitka-crash-report.xml
 # Generated installers
 installers/
 
+# Release-key passwords (local-only, never committed)
+release_keys.py
+
 # =============================================================
 # TUF release artifacts — hosted on GitHub Releases, not in git
 # =============================================================

@@ -80,31 +80,50 @@ def check_for_updates() -> bool:
         return False
 
 
-def apply_update():
+def apply_update(progress_hook=None):
     """Download, apply the update, then restart the process.
 
     Call this only after the recognition pipeline has been fully stopped
     and the caller has confirmed the user wants to update.
 
-    The function never returns — it either restarts via os.execv or raises.
+    Args:
+        progress_hook: Optional callable(bytes_downloaded=int, bytes_expected=int)
+                       for reporting download progress to the UI.
+
+    The function never returns — it either restarts via the install script
+    or raises.
     """
     client = _build_client()
     client.check_for_updates()   # must populate new_targets before downloading
     if not client.updates_available:
         raise RuntimeError("No update available to apply.")
-    client.download_and_apply_update(skip_confirmation=True)
 
-
-def _restart_process():
-    """Replace the current process with a fresh copy of itself."""
-    exe = sys.executable
-    args = sys.argv[:]
-    print(f"[updater] Restarting: {exe} {args}")
-    try:
-        # os.execv replaces the process image — clean restart with no orphans
-        os.execv(exe, [exe] + args)
-    except OSError:
-        # execv not available (e.g. frozen exe edge cases) — fall back to spawn
-        import subprocess
-        subprocess.Popen([exe] + args)
-        sys.exit(0)
+    # On Windows the default tufup batch template only copies files — it does
+    # NOT restart the application.  We supply a custom template that launches
+    # the exe again after the robocopy completes.
+    if sys.platform == "win32":
+        # sys.executable points to the embedded python.exe in a Nuitka build,
+        # NOT the actual app exe.  Derive the real name from MAIN_SCRIPT.
+        from app_config import MAIN_SCRIPT
+        _exe_name = os.path.splitext(MAIN_SCRIPT)[0] + ".exe"
+        _batch = (
+            "@echo off\n"
+            "{log_lines}\n"
+            "echo Moving app files...\n"
+            'robocopy "{src_dir}" "{dst_dir}" {robocopy_options}\n'
+            "echo Done.\n"
+            "echo Restarting application...\n"
+            'start "" "{dst_dir}\\{app_exe}"\n'
+            "{delete_self}\n"
+        )
+        client.download_and_apply_update(
+            skip_confirmation=True,
+            progress_hook=progress_hook,
+            batch_template=_batch,
+            batch_template_extra_kwargs={"app_exe": _exe_name},
+        )
+    else:
+        client.download_and_apply_update(
+            skip_confirmation=True,
+            progress_hook=progress_hook,
+        )

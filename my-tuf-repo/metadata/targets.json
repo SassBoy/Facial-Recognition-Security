@@ -2,12 +2,12 @@
  "signatures": [
   {
    "keyid": "422f7e0d9e1992c755347f10bc7fa50e28a5dd098a286ce1ce9585a5068c108c",
-   "sig": "15d516d08b207f54ede365755c23f9318ee6049bd88440895fba6795407f5d9eaf6ecb906e3cc68bb8814259b9035e103e6c629b639408b84d0c3a7bf1ad3407"
+   "sig": "d42bcf393b6cec9d1cd80cf6acc9a1aee3fe9bfce3df2432464a95c511e97ced5c769f1fc19b7a39b820ac02f5a650d20d2c0a6542790ee065ddd453538c7307"
   }
  ],
  "signed": {
   "_type": "targets",
-  "expires": "2027-03-03T01:38:54Z",
+  "expires": "2027-03-04T07:54:40Z",
   "spec_version": "1.0.31",
   "targets": {
    "Desktop-Monitor-0.0.4.tar.gz": {
@@ -21,8 +21,138 @@
      "sha256": "8e42a57269fe9c654f1b635a6f508a40d294532e01e961b5a80b7575a897318e"
     },
     "length": 227397213
+   },
+   "Desktop-Monitor-0.1.0.patch": {
+    "custom": {
+     "tufup": {
+      "tar_hash": "0d1cdb7b49c1a7f1d8271d4e1717b43ae7cb6893d3202a3bc23f4b308efde315",
+      "tar_hash_algorithm": "sha256",
+      "tar_size": 300615680
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "012e409cebe0cd7194bd55d5fd4081dd67fcc25180cc32d0240f02dfe6078399"
+    },
+    "length": 11880133
+   },
+   "Desktop-Monitor-0.1.0.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "3dadd03efd198a9f22349ae7d076d039f5eac88362c16a94fc8b862f49237358"
+    },
+    "length": 131361902
+   },
+   "Desktop-Monitor-0.1.1.patch": {
+    "custom": {
+     "tufup": {
+      "tar_hash": "139c980e5df0a290d759eb39b8d5f46b2f76b7447c689a555942f74a97bb3e40",
+      "tar_hash_algorithm": "sha256",
+      "tar_size": 302141440
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "db7003e8ddd5346bda7bf29694f60dd87876ecd2a981408b23e9c615188a847c"
+    },
+    "length": 14544228
+   },
+   "Desktop-Monitor-0.1.1.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "ecc63c1c6ef2a708170d84a52cf9fadfde4ce284c6654f0d35d68f4d69c1b593"
+    },
+    "length": 132380101
+   },
+   "Desktop-Monitor-0.1.2.patch": {
+    "custom": {
+     "tufup": {
+      "tar_hash": "59bd4830cd732843971fb8cdbbc7bb5b9a06c60c93527c75ddf063dd245df2ce",
+      "tar_hash_algorithm": "sha256",
+      "tar_size": 302407680
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "faf38327784f3f324d07fa39331031834da62d13112df4e78b29d1862d1e6980"
+    },
+    "length": 2022
+   },
+   "Desktop-Monitor-0.1.2.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "03293aca7b26894883c1a3bf17d389bc2ae8c2d63502decbcf74682f6e159d0d"
+    },
+    "length": 132421645
+   },
+   "Desktop-Monitor-0.1.3.patch": {
+    "custom": {
+     "tufup": {
+      "tar_hash": "dc0270b9fcc0a22be0fa5a1a9fd36f397bcae3f7b800c21ed487e63f9ac8d330",
+      "tar_hash_algorithm": "sha256",
+      "tar_size": 302407680
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "4cb4331b288901d3a50cb4228cce39d88770e9e57f364c5d2995c58274c51897"
+    },
+    "length": 491286
+   },
+   "Desktop-Monitor-0.1.3.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "1008fa1ef7b069515d1cc36d5329ac64469ac4eaf18517ec821df5abab7e0092"
+    },
+    "length": 132422801
+   },
+   "Desktop-Monitor-0.1.4.patch": {
+    "custom": {
+     "tufup": {
+      "tar_hash": "e0ef22cb6469fc04dfb6419b04886f4176236581341ad50a6486d04525ed25c1",
+      "tar_hash_algorithm": "sha256",
+      "tar_size": 302407680
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "bc2676a26a658c0785e721c39d43307493ac39b95df7963978014061f340e33b"
+    },
+    "length": 428898
+   },
+   "Desktop-Monitor-0.1.4.tar.gz": {
+    "custom": {
+     "tufup": {
+      "required": false
+     },
+     "user": null
+    },
+    "hashes": {
+     "sha256": "feac88fe4eae5ee04b671b770f49280278f37ceec538fb482b9aae121d6fa094"
+    },
+    "length": 132422644
    }
   },
-  "version": 2
+  "version": 7
  }
 }
