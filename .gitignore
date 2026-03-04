@@ -12,14 +12,17 @@ dist/
 build/
 *.dist-info/
 nuitka-crash-report.xml
+# Generated installers
+installers/
 
 # =============================================================
 # TUF release artifacts — hosted on GitHub Releases, not in git
 # =============================================================
 # large .tar.gz and .patch bundles
 my-tuf-repo/targets/
-# extracted targets cache
-targets/
+# runtime tufup client dirs — created automatically by updater.py
+/metadata/
+/targets/
 
 # =============================================================
 # Python
