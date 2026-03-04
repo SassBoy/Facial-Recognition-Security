@@ -48,8 +48,12 @@ crash.log
 # =============================================================
 # ONNX model files
 models/
-# user face database — machine-specific
-faces_db/
+# Face databases — ignore photos, preserve directory structure via .gitkeep
+# All files under faces_db/ are ignored...
+faces_db/**/*
+# ...except directories themselves and .gitkeep placeholder files
+!faces_db/**/
+!faces_db/**/.gitkeep
 
 # =============================================================
 # Cache & temp
