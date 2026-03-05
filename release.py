@@ -10,6 +10,7 @@ Workflow:
 """
 
 import argparse
+import os
 import pathlib
 import sys
 
@@ -28,6 +29,7 @@ _rcli, _ = _rparser.parse_known_args()
 # ---------------------------------------------------------------------------
 
 _KEY_PASSWORDS = {}   # role_name  →  password  (only non-empty entries)
+_CI = os.environ.get("CI", "").lower() in ("true", "1")  # True when running in GitHub Actions
 
 try:
     from release_keys import (
@@ -41,8 +43,16 @@ try:
     ]:
         if _pw:
             _KEY_PASSWORDS[_role] = _pw
+        elif _CI:
+            print(f"[release] ERROR: Password for '{_role}' key is empty. "
+                  f"Set the TUF_PWD_{_role.upper()} secret in GitHub.")
+            sys.exit(1)
 except ImportError:
-    # File doesn't exist yet — user will be prompted interactively
+    if _CI:
+        print("[release] ERROR: release_keys.py not found in CI — "
+              "check the 'Write key passwords file' workflow step.")
+        sys.exit(1)
+    # Local run — user will be prompted interactively
     pass
 
 # ---------------------------------------------------------------------------

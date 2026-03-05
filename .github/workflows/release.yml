@@ -29,7 +29,18 @@ jobs:
           python-version: "3.12"
 
       # -----------------------------------------------------------------------
-      # 3. Install runtime dependencies + Nuitka
+      # 3. Cache Nuitka's C compilation output.
+      #    Unchanged packages (numpy, cv2, tuf, etc.) won't recompile next run.
+      # -----------------------------------------------------------------------
+      - name: Cache Nuitka compilation
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Nuitka\Nuitka
+          key: nuitka-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: nuitka-${{ runner.os }}-
+
+      # -----------------------------------------------------------------------
+      # 4. Install runtime dependencies + Nuitka
       # -----------------------------------------------------------------------
       - name: Install dependencies
         run: |
@@ -38,7 +49,7 @@ jobs:
           pip install nuitka
 
       # -----------------------------------------------------------------------
-      # 4. Strip the leading 'v' from the tag  (v0.1.5 -> 0.1.5)
+      # 5. Strip the leading 'v' from the tag  (v0.1.5 -> 0.1.5)
       # -----------------------------------------------------------------------
       - name: Extract version number
         id: version
@@ -48,7 +59,7 @@ jobs:
           echo "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       # -----------------------------------------------------------------------
-      # 5. Write TUF private keys from GitHub Secrets to the Keys/ directory.
+      # 6. Write TUF private keys from GitHub Secrets to the Keys/ directory.
       #    Each secret is the raw file content encoded as Base64.
       #    See "Setting up secrets" section in the README for how to create them.
       # -----------------------------------------------------------------------
@@ -62,7 +73,7 @@ jobs:
           [System.IO.File]::WriteAllBytes("Keys\timestamp", [Convert]::FromBase64String("${{ secrets.TUF_KEY_TIMESTAMP }}"))
 
       # -----------------------------------------------------------------------
-      # 6. Write release_keys.py so release.py can load key passwords
+      # 7. Write release_keys.py so release.py can load key passwords
       #    without interactive prompts.
       # -----------------------------------------------------------------------
       - name: Write key passwords file
@@ -76,7 +87,7 @@ jobs:
           "@ | Set-Content release_keys.py
 
       # -----------------------------------------------------------------------
-      # 7. Compile with Nuitka (non-interactive, production mode)
+      # 8. Compile with Nuitka (non-interactive, production mode)
       # -----------------------------------------------------------------------
       - name: Build with Nuitka
         run: python build.py --version ${{ steps.version.outputs.VERSION }} --prod
@@ -103,9 +114,10 @@ jobs:
           }
 
       # -----------------------------------------------------------------------
-      # 9. Sign TUF metadata and create patch bundle (non-interactive)
+      # 10. Sign TUF metadata and create patch bundle (non-interactive)
       # -----------------------------------------------------------------------
       - name: Sign TUF release bundle
+        timeout-minutes: 10
         run: python release.py --yes
 
       # -----------------------------------------------------------------------
@@ -135,7 +147,7 @@ jobs:
           }
 
       # -----------------------------------------------------------------------
-      # 11. Build the Inno Setup installer
+      # 12. Build the Inno Setup installer
       #    Inno Setup 6 is pre-installed on windows-latest at this path.
       # -----------------------------------------------------------------------
       - name: Build installer
@@ -145,7 +157,7 @@ jobs:
         run: python installer.py --platform windows
 
       # -----------------------------------------------------------------------
-      # 12. Always wipe private keys — even if a previous step failed
+      # 13. Always wipe private keys — even if a previous step failed
       # -----------------------------------------------------------------------
       - name: Wipe private keys
         if: always()
@@ -155,7 +167,7 @@ jobs:
                       -Force -ErrorAction SilentlyContinue
 
       # -----------------------------------------------------------------------
-      # 13. Create (or update) the versioned GitHub Release and attach installer
+      # 14. Create (or update) the versioned GitHub Release and attach installer
       #     This creates the release at tag v0.1.5 with the .exe attached.
       # -----------------------------------------------------------------------
       - name: Upload installer to GitHub Release
@@ -169,7 +181,7 @@ jobs:
           files: installers/Desktop-Monitor-${{ steps.version.outputs.VERSION }}-Setup.exe
 
       # -----------------------------------------------------------------------
-      # 14. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
+      # 15. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
       #     End-user updater polls this release for patches and signed metadata.
       # -----------------------------------------------------------------------
       - name: Update TUF repository release

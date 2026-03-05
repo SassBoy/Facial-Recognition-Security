@@ -133,7 +133,9 @@ cmd = [
     "--windows-uac-admin",
     f"--output-dir={OUTPUT_DIR}",
     f"--include-data-dir={MODELS}={MODELS}",
-    f"--include-data-dir={FACES_DB}={FACES_DB}",
+    # faces_db is intentionally excluded from the bundle — it is user data
+    # (enrolled faces) that must survive updates and never be overwritten.
+    # Inno Setup creates the empty faces_db dirs on first install.
     f"--include-data-dir={SPLASH_ASSETS}={SPLASH_ASSETS}",
     f"--include-data-file={SETTINGS}={SETTINGS}",
     f"--include-data-file={ICON_PATH}={ICON_PATH}",
@@ -150,7 +152,7 @@ if IS_PROD:
     cmd.extend([
         "--windows-console-mode=disable",  # replaces deprecated --windows-disable-console
         f"--windows-icon-from-ico={ICON_PATH}",
-        "--lto=yes",
+        # --lto=yes is omitted: adds ~15 min to CI compile time for marginal gain
         "--deployment"
     ])
 else:
