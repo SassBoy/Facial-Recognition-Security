@@ -461,7 +461,9 @@ def _face_size_pct(face, frame_h, frame_w):
 
 _COLORS = {}
 
-
+$env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
+gh auth login$env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
+gh auth login
 def color_for(name, bad_names=None):
     if name not in _COLORS:
         if name == "Unknown":

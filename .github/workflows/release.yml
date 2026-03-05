@@ -29,17 +29,6 @@ jobs:
           python-version: "3.12"
 
       # -----------------------------------------------------------------------
-      # 3. Cache Nuitka's C compilation output.
-      #    Unchanged packages (numpy, cv2, tuf, etc.) won't recompile next run.
-      # -----------------------------------------------------------------------
-      - name: Cache Nuitka compilation
-        uses: actions/cache@v4
-        with:
-          path: ~\AppData\Local\Nuitka\Nuitka
-          key: nuitka-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
-          restore-keys: nuitka-${{ runner.os }}-
-
-      # -----------------------------------------------------------------------
       # 4. Install runtime dependencies + Nuitka
       # -----------------------------------------------------------------------
       - name: Install dependencies
