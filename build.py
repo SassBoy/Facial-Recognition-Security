@@ -136,8 +136,6 @@ cmd = [
     f"--include-data-dir={SPLASH_ASSETS}={SPLASH_ASSETS}",
     f"--include-data-file={SETTINGS}={SETTINGS}",
     f"--include-data-file={ICON_PATH}={ICON_PATH}",
-    #this will need to change
-    f"--include-data-dir=cache=cache",
     f"--include-data-file=my-tuf-repo/metadata/root.json=cache/metadata/root.json",
     f"--include-package-data=securesystemslib",
     f"--include-package=jaraco",
