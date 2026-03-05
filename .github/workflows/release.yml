@@ -82,13 +82,60 @@ jobs:
         run: python build.py --version ${{ steps.version.outputs.VERSION }} --prod
 
       # -----------------------------------------------------------------------
-      # 8. Sign TUF metadata and create patch bundle (non-interactive)
+      # 8. Restore previous TUF targets from the tuf-repo release so tufup
+      #    can create a patch against the previous version's archive.
+      #    Also ensures my-tuf-repo/targets/ exists before release.py runs.
+      # -----------------------------------------------------------------------
+      - name: Download existing TUF targets from tuf-repo release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "my-tuf-repo\targets" | Out-Null
+          gh release download tuf-repo `
+            --repo ${{ github.repository }} `
+            --dir "my-tuf-repo\targets" `
+            --pattern "*.tar.gz" `
+            --pattern "*.patch" `
+            --clobber 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "No existing targets found (likely first run) - continuing"
+          }
+
+      # -----------------------------------------------------------------------
+      # 9. Sign TUF metadata and create patch bundle (non-interactive)
       # -----------------------------------------------------------------------
       - name: Sign TUF release bundle
         run: python release.py --yes
 
       # -----------------------------------------------------------------------
-      # 9. Build the Inno Setup installer
+      # 10. Prune old .tar.gz archives — keep only the newest one.
+      #     .patch files are all kept so users on any older version can update.
+      # -----------------------------------------------------------------------
+      - name: Prune old tar.gz archives
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $targetsDir = "my-tuf-repo\targets"
+
+          # Find all .tar.gz files sorted oldest-first, keep only the last one
+          $allTars = Get-ChildItem -Path $targetsDir -Filter "*.tar.gz" |
+                     Sort-Object LastWriteTime
+          $toDelete = $allTars | Select-Object -SkipLast 1
+
+          foreach ($f in $toDelete) {
+            Write-Host "Removing old local archive: $($f.Name)"
+            Remove-Item $f.FullName -Force
+
+            # Also delete from the remote tuf-repo release so it doesn't accumulate
+            gh release delete-asset tuf-repo $f.Name `
+              --repo ${{ github.repository }} `
+              --yes 2>$null || Write-Host "  (asset not on remote, skipping)"
+          }
+
+      # -----------------------------------------------------------------------
+      # 11. Build the Inno Setup installer
       #    Inno Setup 6 is pre-installed on windows-latest at this path.
       # -----------------------------------------------------------------------
       - name: Build installer
@@ -98,7 +145,7 @@ jobs:
         run: python installer.py --platform windows
 
       # -----------------------------------------------------------------------
-      # 10. Always wipe private keys — even if a previous step failed
+      # 12. Always wipe private keys — even if a previous step failed
       # -----------------------------------------------------------------------
       - name: Wipe private keys
         if: always()
@@ -108,7 +155,7 @@ jobs:
                       -Force -ErrorAction SilentlyContinue
 
       # -----------------------------------------------------------------------
-      # 11. Create (or update) the versioned GitHub Release and attach installer
+      # 13. Create (or update) the versioned GitHub Release and attach installer
       #     This creates the release at tag v0.1.5 with the .exe attached.
       # -----------------------------------------------------------------------
       - name: Upload installer to GitHub Release
@@ -122,7 +169,7 @@ jobs:
           files: installers/Desktop-Monitor-${{ steps.version.outputs.VERSION }}-Setup.exe
 
       # -----------------------------------------------------------------------
-      # 12. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
+      # 14. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
       #     End-user updater polls this release for patches and signed metadata.
       # -----------------------------------------------------------------------
       - name: Update TUF repository release
