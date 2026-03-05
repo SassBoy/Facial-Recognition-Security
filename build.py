@@ -1,11 +1,33 @@
+import argparse
 import os
 import re
 import subprocess
 import shutil
 import sys  # to ensure its building uses the env
-import tkinter as tk
+
+# tkinter is only needed for the interactive GUI dialog.
+# On headless CI runners the import still works (Windows has tk bundled)
+# but we never instantiate the dialog when --version is passed.
+try:
+    import tkinter as tk
+    _HAS_TK = True
+except ImportError:
+    tk = None          # type: ignore[assignment]
+    _HAS_TK = False
 
 from app_config import APP_NAME, APP_VERSION, MAIN_SCRIPT, ICON_PATH
+
+# ---------------------------------------------------------------------------
+# CLI argument parsing — lets CI bypass the Tkinter dialog
+#   python build.py --version 0.1.5 --prod
+# ---------------------------------------------------------------------------
+
+_parser = argparse.ArgumentParser(add_help=False)
+_parser.add_argument("--version", dest="cli_version", default=None,
+                     help="Version string (skips GUI dialog)")
+_parser.add_argument("--prod", dest="cli_prod", action="store_true", default=False,
+                     help="Production build (skips GUI dialog)")
+_cli_args, _ = _parser.parse_known_args()
 
 # ---------------------------------------------------------------------------
 # Version prompt — ask for the new build number before compiling
@@ -68,17 +90,27 @@ class _BuildDialog(tk.Toplevel):
         self.destroy()
 
 
-_root = tk.Tk()
-_root.withdraw()
 _current_ver = _get_current_version()
-_dlg = _BuildDialog(_root, _current_ver)
-_new_ver  = _dlg.result_version
-IS_PROD   = _dlg.result_prod
-_root.destroy()
 
-if not _new_ver:
-    print("Build cancelled.")
-    sys.exit(0)
+if _cli_args.cli_version:
+    # Non-interactive mode (CI / master script)
+    _new_ver = _cli_args.cli_version
+    IS_PROD  = _cli_args.cli_prod
+else:
+    # Interactive mode — show the Tkinter dialog
+    if not _HAS_TK:
+        print("[build] ERROR: tkinter is not available and no --version was supplied.")
+        sys.exit(1)
+    _root = tk.Tk()
+    _root.withdraw()
+    _dlg = _BuildDialog(_root, _current_ver)
+    _new_ver  = _dlg.result_version
+    IS_PROD   = _dlg.result_prod
+    _root.destroy()
+
+    if not _new_ver:
+        print("Build cancelled.")
+        sys.exit(0)
 
 if _new_ver != _current_ver:
     _set_version(_new_ver)

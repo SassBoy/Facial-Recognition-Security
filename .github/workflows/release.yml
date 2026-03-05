@@ -1,0 +1,138 @@
+name: Build & Release
+
+# Triggers ONLY when you push a version tag like:  git tag v0.1.5 && git push --tags
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write # needed to create/update GitHub Releases
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout full repo
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python (match your local version)
+      # -----------------------------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # -----------------------------------------------------------------------
+      # 3. Install runtime dependencies + Nuitka
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nuitka
+
+      # -----------------------------------------------------------------------
+      # 4. Strip the leading 'v' from the tag  (v0.1.5 -> 0.1.5)
+      # -----------------------------------------------------------------------
+      - name: Extract version number
+        id: version
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}" -replace '^v', ''
+          echo "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      # -----------------------------------------------------------------------
+      # 5. Write TUF private keys from GitHub Secrets to the Keys/ directory.
+      #    Each secret is the raw file content encoded as Base64.
+      #    See "Setting up secrets" section in the README for how to create them.
+      # -----------------------------------------------------------------------
+      - name: Restore TUF private keys
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path Keys | Out-Null
+          [System.IO.File]::WriteAllBytes("Keys\root",      [Convert]::FromBase64String("${{ secrets.TUF_KEY_ROOT }}"))
+          [System.IO.File]::WriteAllBytes("Keys\snapshot",  [Convert]::FromBase64String("${{ secrets.TUF_KEY_SNAPSHOT }}"))
+          [System.IO.File]::WriteAllBytes("Keys\targets",   [Convert]::FromBase64String("${{ secrets.TUF_KEY_TARGETS }}"))
+          [System.IO.File]::WriteAllBytes("Keys\timestamp", [Convert]::FromBase64String("${{ secrets.TUF_KEY_TIMESTAMP }}"))
+
+      # -----------------------------------------------------------------------
+      # 6. Write release_keys.py so release.py can load key passwords
+      #    without interactive prompts.
+      # -----------------------------------------------------------------------
+      - name: Write key passwords file
+        shell: pwsh
+        run: |
+          @"
+          ROOT_PASSWORD      = "${{ secrets.TUF_PWD_ROOT }}"
+          TARGETS_PASSWORD   = "${{ secrets.TUF_PWD_TARGETS }}"
+          SNAPSHOT_PASSWORD  = "${{ secrets.TUF_PWD_SNAPSHOT }}"
+          TIMESTAMP_PASSWORD = "${{ secrets.TUF_PWD_TIMESTAMP }}"
+          "@ | Set-Content release_keys.py
+
+      # -----------------------------------------------------------------------
+      # 7. Compile with Nuitka (non-interactive, production mode)
+      # -----------------------------------------------------------------------
+      - name: Build with Nuitka
+        run: python build.py --version ${{ steps.version.outputs.VERSION }} --prod
+
+      # -----------------------------------------------------------------------
+      # 8. Sign TUF metadata and create patch bundle (non-interactive)
+      # -----------------------------------------------------------------------
+      - name: Sign TUF release bundle
+        run: python release.py --yes
+
+      # -----------------------------------------------------------------------
+      # 9. Build the Inno Setup installer
+      #    Inno Setup 6 is pre-installed on windows-latest at this path.
+      # -----------------------------------------------------------------------
+      - name: Build installer
+        shell: pwsh
+        env:
+          INNO_DIR: 'C:\Program Files (x86)\Inno Setup 6'
+        run: python installer.py --platform windows
+
+      # -----------------------------------------------------------------------
+      # 10. Always wipe private keys — even if a previous step failed
+      # -----------------------------------------------------------------------
+      - name: Wipe private keys
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Path "Keys\root","Keys\snapshot","Keys\targets","Keys\timestamp","release_keys.py" `
+                      -Force -ErrorAction SilentlyContinue
+
+      # -----------------------------------------------------------------------
+      # 11. Create (or update) the versioned GitHub Release and attach installer
+      #     This creates the release at tag v0.1.5 with the .exe attached.
+      # -----------------------------------------------------------------------
+      - name: Upload installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Desktop-Monitor ${{ steps.version.outputs.VERSION }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: installers/Desktop-Monitor-${{ steps.version.outputs.VERSION }}-Setup.exe
+
+      # -----------------------------------------------------------------------
+      # 12. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
+      #     End-user updater polls this release for patches and signed metadata.
+      # -----------------------------------------------------------------------
+      - name: Update TUF repository release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tuf-repo
+          name: "TUF Repository (auto-updated, do not delete)"
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          files: |
+            my-tuf-repo/metadata/*.json
+            my-tuf-repo/targets/*

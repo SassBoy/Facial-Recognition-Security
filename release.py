@@ -9,8 +9,19 @@ Workflow:
      as assets on a GitHub Release (use a fixed tag, e.g. "tuf-repo").
 """
 
+import argparse
 import pathlib
 import sys
+
+# ---------------------------------------------------------------------------
+# CLI argument parsing — lets CI bypass the interactive confirmation prompt
+#   python release.py --yes
+# ---------------------------------------------------------------------------
+
+_rparser = argparse.ArgumentParser(add_help=False)
+_rparser.add_argument("--yes", "-y", dest="auto_confirm", action="store_true",
+                      default=False, help="Skip confirmation prompt")
+_rcli, _ = _rparser.parse_known_args()
 
 # ---------------------------------------------------------------------------
 # Load saved key passwords (if any) from release_keys.py
@@ -96,10 +107,13 @@ print()
 # Confirm before proceeding (gives user a chance to abort)
 # ---------------------------------------------------------------------------
 
-confirm = input(f"Package version {compiled_version} for release? [y/N] ").strip().lower()
-if confirm != "y":
-    print("[release] Aborted.")
-    sys.exit(0)
+if _rcli.auto_confirm:
+    print(f"[release] Auto-confirmed (--yes flag).")
+else:
+    confirm = input(f"Package version {compiled_version} for release? [y/N] ").strip().lower()
+    if confirm != "y":
+        print("[release] Aborted.")
+        sys.exit(0)
 
 # ---------------------------------------------------------------------------
 # Build the TUF-signed bundle
