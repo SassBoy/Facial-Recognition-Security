@@ -114,7 +114,7 @@ else:
 
 if _new_ver != _current_ver:
     _set_version(_new_ver)
-    print(f"[build] Version updated: {_current_ver} → {_new_ver}")
+    print(f"[build] Version updated: {_current_ver} -> {_new_ver}")
 
 print(f"[build] Mode: {'PRODUCTION' if IS_PROD else 'TEST'}")
 
