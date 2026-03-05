@@ -128,6 +128,7 @@ SETTINGS = "settings.json"
 cmd = [
     sys.executable, "-m", "nuitka",
     "--standalone",
+    "--assume-yes-for-downloads",   # allow CI to download Dependency Walker silently
     "--enable-plugin=tk-inter",
     "--windows-uac-admin",
     f"--output-dir={OUTPUT_DIR}",
@@ -147,7 +148,7 @@ cmd = [
 
 if IS_PROD:
     cmd.extend([
-        "--windows-disable-console",
+        "--windows-console-mode=disable",  # replaces deprecated --windows-disable-console
         f"--windows-icon-from-ico={ICON_PATH}",
         "--lto=yes",
         "--deployment"
