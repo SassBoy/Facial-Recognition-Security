@@ -97,9 +97,14 @@ jobs:
             --dir "my-tuf-repo\targets" `
             --pattern "*.tar.gz" `
             --pattern "*.patch" `
-            --clobber 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "No existing targets found (likely first run) - continuing"
+            --clobber
+          Write-Host "Downloaded targets:"
+          Get-ChildItem "my-tuf-repo\targets" | ForEach-Object { Write-Host "  $($_.Name)" }
+          $tars = @(Get-ChildItem "my-tuf-repo\targets\*.tar.gz")
+          if ($tars.Count -eq 0) {
+            Write-Host "WARNING: No .tar.gz found in tuf-repo release."
+            Write-Host "If this is not the first release, manually upload the previous .tar.gz to the tuf-repo release."
+            exit 1
           }
 
       # -----------------------------------------------------------------------
