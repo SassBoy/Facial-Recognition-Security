@@ -172,15 +172,25 @@ jobs:
       # -----------------------------------------------------------------------
       # 15. Push updated TUF metadata and targets to the fixed "tuf-repo" release.
       #     End-user updater polls this release for patches and signed metadata.
+      #     Uses gh CLI directly — more reliable than action-gh-release for
+      #     asset-only updates on an existing release.
       # -----------------------------------------------------------------------
       - name: Update TUF repository release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: tuf-repo
-          name: "TUF Repository (auto-updated, do not delete)"
-          draft: false
-          prerelease: false
-          generate_release_notes: false
-          files: |
-            my-tuf-repo/metadata/*.json
-            my-tuf-repo/targets/*
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ensure the tuf-repo release exists (no-op if already present)
+          gh release create tuf-repo `
+            --repo ${{ github.repository }} `
+            --title "TUF Repository (auto-updated, do not delete)" `
+            --notes "Internal TUF update channel. Do not delete." `
+            --prerelease 2>$null || true
+
+          # Upload / overwrite all metadata and target files
+          $files  = @(Get-ChildItem "my-tuf-repo\metadata\*.json" | Select-Object -ExpandProperty FullName)
+          $files += @(Get-ChildItem "my-tuf-repo\targets\*"       | Select-Object -ExpandProperty FullName)
+
+          gh release upload tuf-repo $files `
+            --repo ${{ github.repository }} `
+            --clobber
